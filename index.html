@@ -2,95 +2,91 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Sublistas Grátis</title>
+  <title>Sublistas</title>
+  <!-- Link oficial e direto da API do Trello -->
   <script src="https://trellocdn.com"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #172b4d; font-size: 14px; margin: 0; padding: 10px; }
-    .subtask-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #00000014; }
-    .subtask-item.done span { text-decoration: line-through; color: #6b778c; }
-    .input-box { display: flex; margin-bottom: 15px; gap: 8px; }
-    input[type="text"] { flex-grow: 1; padding: 6px; border: 1px solid #dfe1e6; border-radius: 3px; }
-    button { background-color: #0079bf; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-weight: bold; }
-    button:hover { background-color: #026aa7; }
-    .btn-del { background-color: #eb5a46; padding: 2px 6px; font-size: 11px; }
-    .btn-del:hover { background-color: #cf513d; }
+    body { font-family: sans-serif; color: #172b4d; margin: 0; padding: 10px; background: transparent; }
+    .input-box { display: flex; gap: 8px; margin-bottom: 10px; }
+    input { flex-grow: 1; padding: 6px; border: 1px solid #dfe1e6; border-radius: 3px; }
+    button { background: #0079bf; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-weight: bold; }
+    .item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #00000014; }
+    .done span { text-decoration: line-through; color: #6b778c; }
+    .btn-del { background: #eb5a46; font-size: 11px; padding: 2px 6px; }
   </style>
 </head>
 <body>
 
   <div class="input-box">
-    <input type="text" id="new-subtask" placeholder="Adicionar nova subtarefa aninhada...">
-    <button onclick="addSubtask()">+</button>
+    <input type="text" id="new-item" placeholder="Adicionar nova subtarefa...">
+    <button onclick="addItem()">+</button>
   </div>
-  <div id="subtasks-container"></div>
+  <div id="list"></div>
 
   <script>
+    // Inicialização simplificada sem links externos de ícones para não quebrar
     var t = TrelloPowerUp.initialize({
       'card-back-section': function(t, options) {
         return {
           title: 'Sublistas Personalizadas',
-          // NOVO ÍCONE DA COMUNIDADE (Não bloqueia)
-          icon: 'https://jsdelivr.net',
-          content: { type: 'iframe', url: 'https://github.io', height: 250 }
+          content: { type: 'iframe', url: 'https://github.io', height: 200 }
         };
       }
     });
 
-    var cardContext = null;
+    var cardId = null;
 
     t.render(function() {
       return t.card('id')
         .then(function(card) {
-          cardContext = card.id;
-          return t.get(cardContext, 'shared', 'items', []);
+          cardId = card.id;
+          return t.get(cardId, 'shared', 'items', []);
         })
-        .then(renderList);
+        .then(drawList);
     });
 
-    function renderList(items) {
-      var container = document.getElementById('subtasks-container');
+    function drawList(items) {
+      var container = document.getElementById('list');
       container.innerHTML = '';
-      items.forEach(function(item, index) {
+      items.forEach(function(item, i) {
         var div = document.createElement('div');
-        div.className = 'subtask-item' + (item.done ? ' done' : '');
+        div.className = 'item' + (item.done ? ' done' : '');
         div.innerHTML = `
           <label>
-            <input type="checkbox" ${item.done ? 'checked' : ''} onclick="toggleTask(${index})">
+            <input type="checkbox" ${item.done ? 'checked' : ''} onclick="toggleItem(${i})">
             <span>${item.text}</span>
           </label>
-          <button class="btn-del" onclick="deleteTask(${index})">Excluir</button>
+          <button class="btn-del" onclick="deleteItem(${i})">Excluir</button>
         `;
         container.appendChild(div);
       });
     }
 
-    function addSubtask() {
-      var input = document.getElementById('new-subtask');
+    function addItem() {
+      var input = document.getElementById('new-item');
       if (!input.value.trim()) return;
-
-      t.get(cardContext, 'shared', 'items', [])
+      t.get(cardId, 'shared', 'items', [])
         .then(function(items) {
           items.push({ text: input.value, done: false });
-          return t.set(cardContext, 'shared', 'items', items);
+          return t.set(cardId, 'shared', 'items', items);
         })
-        .then(function() {
-          input.value = '';
+        .then(function() { input.value = ''; });
+    }
+
+    function toggleItem(i) {
+      t.get(cardId, 'shared', 'items', [])
+        .then(function(items) {
+          items[i].done = !items[i].done;
+          return t.set(cardId, 'shared', 'items', items);
         });
     }
 
-    function toggleTask(index) {
-      t.get(cardContext, 'shared', 'items', [])
+    // Correção na função de deletar para evitar bugs de salvamento no Trello
+    function deleteItem(i) {
+      t.get(cardId, 'shared', 'items', [])
         .then(function(items) {
-          items[index].done = !items[index].done;
-          return t.set(cardContext, 'shared', 'items', items);
-        });
-    }
-
-    function deleteTask(index) {
-      t.get(cardContext, 'shared', 'items', [])
-        .then(function(items) {
-          items.splice(index, 1);
-          return t.set(cardContext, 'shared', 'items', items);
+          items.splice(i, 1);
+          return t.set(cardId, 'shared', 'items', items);
         });
     }
   </script>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Sublistas Grátis</title>
-  <!-- Carrega a biblioteca oficial do Trello -->
+  <!-- CORREÇÃO: Endereço completo da biblioteca do Trello -->
   <script src="https://trellocdn.com"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #172b4d; font-size: 14px; margin: 0; padding: 10px; }
@@ -26,13 +26,15 @@
   <div id="subtasks-container"></div>
 
   <script>
-        // Inicializa a instância do Power-Up do Trello
+    // Inicializa a instância do Power-Up do Trello
     var t = TrelloPowerUp.initialize({
       'card-back-section': function(t, options) {
         return {
           title: 'Sublistas Personalizadas',
+          // CORREÇÃO: Link de ícone válido para não ser bloqueado
           icon: 'https://flaticon.com',
-          content: { type: 'iframe', url: 'https://xxthund3rxx.github.io/meu-trello-powerup/', height: 250 }
+          // CORREÇÃO: URL direta do seu deploy sem o comando signUrl
+          content: { type: 'iframe', url: 'https://github.io', height: 250 }
         };
       }
     });

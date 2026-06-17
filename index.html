@@ -2,93 +2,31 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Sublistas</title>
-  <!-- Link oficial e direto da API do Trello -->
-  <script src="https://trellocdn.com"></script>
-  <style>
-    body { font-family: sans-serif; color: #172b4d; margin: 0; padding: 10px; background: transparent; }
-    .input-box { display: flex; gap: 8px; margin-bottom: 10px; }
-    input { flex-grow: 1; padding: 6px; border: 1px solid #dfe1e6; border-radius: 3px; }
-    button { background: #0079bf; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-weight: bold; }
-    .item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #00000014; }
-    .done span { text-decoration: line-through; color: #6b778c; }
-    .btn-del { background: #eb5a46; font-size: 11px; padding: 2px 6px; }
-  </style>
+  <title>Sublistas - Conector</title>
+  <!-- URL oficial da biblioteca do Power-Up. NÃO trocar. -->
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
 </head>
 <body>
-
-  <div class="input-box">
-    <input type="text" id="new-item" placeholder="Adicionar nova subtarefa...">
-    <button onclick="addItem()">+</button>
-  </div>
-  <div id="list"></div>
-
   <script>
-    // Inicialização simplificada sem links externos de ícones para não quebrar
-    var t = TrelloPowerUp.initialize({
-      'card-back-section': function(t, options) {
+    // Ícone cinza embutido (checkmark) só pra não depender de outro arquivo.
+    // Se quiser, troque por uma URL https para um PNG/SVG 144x144 seu.
+    var ICON = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%236b778c' d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/></svg>";
+
+    TrelloPowerUp.initialize({
+      'card-back-section': function (t, options) {
         return {
           title: 'Sublistas Personalizadas',
-          content: { type: 'iframe', url: 'https://github.io', height: 200 }
+          icon: ICON,
+          content: {
+            type: 'iframe',
+            // t.signUrl assina a URL para o Trello confiar nela.
+            // Caminho relativo: precisa estar na mesma pasta no GitHub Pages.
+            url: t.signUrl('./checklist.html'),
+            height: 240
+          }
         };
       }
     });
-
-    var cardId = null;
-
-    t.render(function() {
-      return t.card('id')
-        .then(function(card) {
-          cardId = card.id;
-          return t.get(cardId, 'shared', 'items', []);
-        })
-        .then(drawList);
-    });
-
-    function drawList(items) {
-      var container = document.getElementById('list');
-      container.innerHTML = '';
-      items.forEach(function(item, i) {
-        var div = document.createElement('div');
-        div.className = 'item' + (item.done ? ' done' : '');
-        div.innerHTML = `
-          <label>
-            <input type="checkbox" ${item.done ? 'checked' : ''} onclick="toggleItem(${i})">
-            <span>${item.text}</span>
-          </label>
-          <button class="btn-del" onclick="deleteItem(${i})">Excluir</button>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    function addItem() {
-      var input = document.getElementById('new-item');
-      if (!input.value.trim()) return;
-      t.get(cardId, 'shared', 'items', [])
-        .then(function(items) {
-          items.push({ text: input.value, done: false });
-          return t.set(cardId, 'shared', 'items', items);
-        })
-        .then(function() { input.value = ''; });
-    }
-
-    function toggleItem(i) {
-      t.get(cardId, 'shared', 'items', [])
-        .then(function(items) {
-          items[i].done = !items[i].done;
-          return t.set(cardId, 'shared', 'items', items);
-        });
-    }
-
-    // Correção na função de deletar para evitar bugs de salvamento no Trello
-    function deleteItem(i) {
-      t.get(cardId, 'shared', 'items', [])
-        .then(function(items) {
-          items.splice(i, 1);
-          return t.set(cardId, 'shared', 'items', items);
-        });
-    }
   </script>
 </body>
 </html>

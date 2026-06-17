@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Sublistas</title>
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  <style>
+    body { font-family: sans-serif; color: #172b4d; margin: 0; padding: 10px; background: transparent; }
+    .input-box { display: flex; gap: 8px; margin-bottom: 10px; }
+    input { flex-grow: 1; padding: 6px; border: 1px solid #dfe1e6; border-radius: 3px; box-sizing: border-box; }
+    button { background: #0079bf; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-weight: bold; }
+    .item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #00000014; }
+    .item label { display: flex; align-items: center; gap: 6px; }
+    .done span { text-decoration: line-through; color: #6b778c; }
+    .btn-del { background: #eb5a46; font-size: 11px; padding: 2px 6px; }
+  </style>
+</head>
+<body>
+  <div class="input-box">
+    <input type="text" id="new-item" placeholder="Adicionar nova subtarefa...">
+    <button id="add-btn">+</button>
+  </div>
+  <div id="list"></div>
+
+  <script>
+    // Esta página roda DENTRO do iframe da seção do cartão.
+    // Por isso usamos TrelloPowerUp.iframe(), e não .initialize().
+    var t = TrelloPowerUp.iframe();
+
+    function loadItems() {
+      // O primeiro parâmetro é o escopo fixo 'card', não o ID do cartão.
+      return t.get('card', 'shared', 'items', []);
+    }
+
+    function saveItems(items) {
+      return t.set('card', 'shared', 'items', items)
+        .then(function () { return t.sizeTo('body'); });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function drawList(items) {
+      var container = document.getElementById('list');
+      container.innerHTML = '';
+      items.forEach(function (item, i) {
+        var div = document.createElement('div');
+        div.className = 'item' + (item.done ? ' done' : '');
+        div.innerHTML =
+          '<label><input type="checkbox" ' + (item.done ? 'checked' : '') + ' data-action="toggle" data-i="' + i + '"><span>' + escapeHtml(item.text) + '</span></label>' +
+          '<button class="btn-del" data-action="delete" data-i="' + i + '">Excluir</button>';
+        container.appendChild(div);
+      });
+    }
+
+    function refresh() {
+      return loadItems().then(drawList).then(function () { return t.sizeTo('body'); });
+    }
+
+    document.getElementById('add-btn').addEventListener('click', function () {
+      var input = document.getElementById('new-item');
+      var value = input.value.trim();
+      if (!value) return;
+      loadItems()
+        .then(function (items) {
+          items.push({ text: value, done: false });
+          return saveItems(items);
+        })
+        .then(function () {
+          input.value = '';
+          return refresh();
+        });
+    });
+
+    document.getElementById('new-item').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('add-btn').click();
+    });
+
+    document.getElementById('list').addEventListener('click', function (e) {
+      var action = e.target.getAttribute('data-action');
+      if (!action) return;
+      var i = parseInt(e.target.getAttribute('data-i'), 10);
+      loadItems().then(function (items) {
+        if (action === 'toggle') {
+          items[i].done = !items[i].done;
+        } else if (action === 'delete') {
+          items.splice(i, 1);
+        }
+        return saveItems(items).then(refresh);
+      });
+    });
+
+    // t.render é o que conecta sua função de desenho ao ciclo de vida do Trello.
+    // Ele é chamado de novo automaticamente quando os dados do cartão mudam.
+    t.render(refresh);
+  </script>
+</body>
+</html>

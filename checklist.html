@@ -389,6 +389,47 @@ async function carregar(){
     t.sizeTo('body');
 }
 
+async function togglePai(parentId){
+
+    const storage =
+        await getStorage();
+
+    const lista =
+        storage[parentId] || [];
+
+    if(lista.length === 0){
+        return;
+    }
+
+    const todasMarcadas =
+        lista.every(x => x.done);
+
+    lista.forEach(sub => {
+        sub.done = !todasMarcadas;
+    });
+
+    storage[parentId] = lista;
+
+    await setStorage(storage);
+
+    const novoEstado =
+        !todasMarcadas
+            ? 'complete'
+            : 'incomplete';
+
+    await fetch(
+        `https://api.trello.com/1/cards/${cardId}/checkItem/${parentId}` +
+        `?state=${novoEstado}` +
+        `&key=${API_KEY}` +
+        `&token=${TOKEN}`,
+        {
+            method:'PUT'
+        }
+    );
+
+    await carregar();
+}
+
 carregar();
 
 </script>

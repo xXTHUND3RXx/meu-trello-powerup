@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Teste API</title>
+<script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+
+<button id="btn">Testar API</button>
+
+<pre id="result"></pre>
+
+<script>
+
+const API_KEY = 'SUA_API_KEY_AQUI';
+
+document.getElementById('btn').onclick = async () => {
+
+    try {
+
+        const token = localStorage.getItem('trello_token');
+
+        document.getElementById('result').innerText =
+            'Token encontrado: ' + (token ? 'SIM' : 'NÃO');
+
+    } catch(err){
+
+        document.getElementById('result').innerText =
+            err.message;
+
+    }
+
+};
+
+</script>
+
+</body>
+</html>

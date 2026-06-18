@@ -1,49 +1,87 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Sublistas</title>
-  <script src="https://p.trellocdn.com/power-up.min.js"></script>
-  <style>
-    body { font-family: sans-serif; color: #172b4d; margin: 0; padding: 10px; background: transparent; }
-    .input-box { display: flex; gap: 8px; margin-bottom: 10px; }
-    input { flex-grow: 1; padding: 6px; border: 1px solid #dfe1e6; border-radius: 3px; box-sizing: border-box; }
-    button { background: #0079bf; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-weight: bold; }
-    .item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #00000014; }
-    .item label { display: flex; align-items: center; gap: 6px; }
-    .done span { text-decoration: line-through; color: #6b778c; }
-    .btn-del { background: #eb5a46; font-size: 11px; padding: 2px 6px; }
-  </style>
+<meta charset="UTF-8">
+<title>Teste API Trello</title>
+<script src="https://p.trellocdn.com/power-up.min.js"></script>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    padding:10px;
+    margin:0;
+    background:transparent;
+}
+
+pre{
+    white-space:pre-wrap;
+    word-break:break-word;
+    font-size:12px;
+    background:#f4f5f7;
+    padding:10px;
+    border-radius:5px;
+    max-height:500px;
+    overflow:auto;
+}
+</style>
+
 </head>
 <body>
-  <div class="input-box">
-    <input type="text" id="new-item" placeholder="Adicionar nova subtarefa...">
-    <button id="add-btn">+</button>
-  </div>
-  <div id="list"></div>
 
-   <script>
+<h3>Teste API Trello</h3>
 
-var t = TrelloPowerUp.iframe();
+<div id="status">Carregando...</div>
 
-t.card('id', 'name')
-.then(function(card){
+<pre id="resultado"></pre>
 
-    document.body.innerHTML =
-        '<h3>Teste OK</h3>' +
-        '<pre>' +
-        JSON.stringify(card, null, 2) +
-        '</pre>';
+<script>
 
-})
-.catch(function(err){
+const API_KEY = '3b120e2d0d7f28b68c09a418636ca6c4';
+const TOKEN = 'ATTAbbf693b04c477c2c1b7ad9e28c35cd6379692f7c3e6ee779012048b14f8f31522F597137';
 
-    document.body.innerHTML =
-        '<pre>ERRO:\n' +
-        err +
-        '</pre>';
+const t = TrelloPowerUp.iframe();
 
-});
+async function iniciar(){
+
+    try{
+
+        document.getElementById('status').innerText =
+            'Obtendo cartão...';
+
+        const card = await t.card('id','name');
+
+        document.getElementById('status').innerText =
+            'Cartão encontrado: ' + card.name;
+
+        const url =
+            `https://api.trello.com/1/cards/${card.id}/checklists?key=${API_KEY}&token=${TOKEN}`;
+
+        const response = await fetch(url);
+
+        const data = await response.json();
+
+        document.getElementById('resultado').textContent =
+            JSON.stringify({
+                card: card,
+                checklists: data
+            }, null, 2);
+
+        t.sizeTo('body');
+
+    }
+    catch(err){
+
+        document.getElementById('status').innerText =
+            'ERRO';
+
+        document.getElementById('resultado').textContent =
+            err.stack || err.message || JSON.stringify(err,null,2);
+
+    }
+
+}
+
+iniciar();
 
 </script>
 

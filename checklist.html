@@ -2,37 +2,84 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Teste API Trello</title>
+<title>DeepLists Clone</title>
 <script src="https://p.trellocdn.com/power-up.min.js"></script>
 
 <style>
+
 body{
-    font-family: Arial, sans-serif;
-    padding:10px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     margin:0;
-    background:transparent;
+    padding:12px;
+    background:#fff;
+    color:#172b4d;
 }
 
-pre{
-    white-space:pre-wrap;
-    word-break:break-word;
-    font-size:12px;
+.loading{
+    color:#5e6c84;
+}
+
+.checklist{
+    margin-bottom:20px;
+}
+
+.checklist-title{
+    font-size:16px;
+    font-weight:600;
+    margin-bottom:10px;
+    padding-bottom:6px;
+    border-bottom:1px solid #dfe1e6;
+}
+
+.task{
+    padding:8px;
+    border-radius:6px;
+    margin-bottom:6px;
     background:#f4f5f7;
-    padding:10px;
-    border-radius:5px;
-    max-height:500px;
-    overflow:auto;
 }
-</style>
 
+.task-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.task-name{
+    font-weight:500;
+}
+
+.subtasks{
+    margin-left:24px;
+    margin-top:8px;
+}
+
+.subtask{
+    padding:4px 0;
+    color:#5e6c84;
+}
+
+.subtask::before{
+    content:"↳ ";
+}
+
+.progress{
+    font-size:12px;
+    color:#5e6c84;
+    margin-bottom:10px;
+}
+
+.empty{
+    color:#5e6c84;
+    font-style:italic;
+}
+
+</style>
 </head>
 <body>
 
-<h3>Teste API Trello</h3>
-
-<div id="status">Carregando...</div>
-
-<pre id="resultado"></pre>
+<div id="app" class="loading">
+Carregando checklists...
+</div>
 
 <script>
 
@@ -41,47 +88,128 @@ const TOKEN = 'ATTAbbf693b04c477c2c1b7ad9e28c35cd6379692f7c3e6ee779012048b14f8f3
 
 const t = TrelloPowerUp.iframe();
 
-async function iniciar(){
+async function carregar(){
 
     try{
 
-        document.getElementById('status').innerText =
-            'Obtendo cartão...';
-
         const card = await t.card('id','name');
 
-        document.getElementById('status').innerText =
-            'Cartão encontrado: ' + card.name;
+        const response = await fetch(
+            `https://api.trello.com/1/cards/${card.id}/checklists?key=${API_KEY}&token=${TOKEN}`
+        );
 
-        const url =
-            `https://api.trello.com/1/cards/${card.id}/checklists?key=${API_KEY}&token=${TOKEN}`;
+        const checklists = await response.json();
 
-        const response = await fetch(url);
-
-        const data = await response.json();
-
-        document.getElementById('resultado').textContent =
-            JSON.stringify({
-                card: card,
-                checklists: data
-            }, null, 2);
+        renderizar(checklists);
 
         t.sizeTo('body');
 
-    }
-    catch(err){
+    }catch(err){
 
-        document.getElementById('status').innerText =
-            'ERRO';
-
-        document.getElementById('resultado').textContent =
-            err.stack || err.message || JSON.stringify(err,null,2);
+        document.getElementById('app').innerHTML =
+            '<pre>' + err.message + '</pre>';
 
     }
 
 }
 
-iniciar();
+function renderizar(checklists){
+
+    const app = document.getElementById('app');
+
+    app.innerHTML = '';
+
+    if(!checklists.length){
+
+        app.innerHTML =
+            '<div class="empty">Nenhum checklist encontrado.</div>';
+
+        return;
+    }
+
+    checklists.forEach(checklist => {
+
+        let html = '';
+
+        html += `
+            <div class="checklist">
+
+                <div class="checklist-title">
+                    📋 ${checklist.name}
+                </div>
+
+                <div class="progress">
+                    ${checklist.checkItems.length} itens
+                </div>
+        `;
+
+        const items = checklist.checkItems;
+
+        for(let i = 0; i < items.length; i++){
+
+            const item = items[i];
+
+            if(item.name.startsWith('↳')){
+                continue;
+            }
+
+            html += `
+                <div class="task">
+
+                    <div class="task-header">
+                        <div class="task-name">
+                            ${item.state === 'complete' ? '✅' : '☐'}
+                            ${escapeHtml(item.name)}
+                        </div>
+                    </div>
+
+                    <div class="subtasks">
+            `;
+
+            let j = i + 1;
+
+            while(
+                j < items.length &&
+                items[j].name.startsWith('↳')
+            ){
+
+                html += `
+                    <div class="subtask">
+                        ${items[j].state === 'complete' ? '✅' : '☐'}
+                        ${escapeHtml(
+                            items[j].name.replace(/^↳\s*/, '')
+                        )}
+                    </div>
+                `;
+
+                j++;
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+        }
+
+        html += `</div>`;
+
+        app.innerHTML += html;
+
+    });
+
+}
+
+function escapeHtml(text){
+
+    return text
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;');
+
+}
+
+carregar();
 
 </script>
 

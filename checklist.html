@@ -2,133 +2,294 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>DeepLists Clone</title>
+<title>DeepLists Clone V2</title>
+
 <script src="https://p.trellocdn.com/power-up.min.js"></script>
 
 <style>
 
 body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     margin:0;
     padding:12px;
-    background:#fff;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     color:#172b4d;
-}
-
-.loading{
-    color:#5e6c84;
+    background:#fff;
 }
 
 .checklist{
-    margin-bottom:20px;
+    margin-bottom:24px;
 }
 
 .checklist-title{
     font-size:16px;
     font-weight:600;
     margin-bottom:10px;
-    padding-bottom:6px;
     border-bottom:1px solid #dfe1e6;
+    padding-bottom:6px;
 }
 
 .task{
-    padding:8px;
-    border-radius:6px;
-    margin-bottom:6px;
     background:#f4f5f7;
+    border-radius:8px;
+    padding:8px;
+    margin-bottom:8px;
 }
 
 .task-header{
     display:flex;
-    align-items:center;
     justify-content:space-between;
+    align-items:center;
 }
 
 .task-name{
     font-weight:500;
 }
 
+.btn{
+    border:none;
+    border-radius:4px;
+    cursor:pointer;
+    padding:4px 8px;
+}
+
+.btn-add{
+    background:#0079bf;
+    color:white;
+}
+
 .subtasks{
-    margin-left:24px;
     margin-top:8px;
+    margin-left:24px;
 }
 
 .subtask{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
     padding:4px 0;
-    color:#5e6c84;
 }
 
-.subtask::before{
-    content:"↳ ";
+.subtask-left{
+    display:flex;
+    align-items:center;
+    gap:6px;
 }
 
-.progress{
-    font-size:12px;
-    color:#5e6c84;
+.btn-del{
+    background:#eb5a46;
+    color:white;
+}
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.4);
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+
+.modal-content{
+    background:white;
+    padding:16px;
+    width:320px;
+    border-radius:8px;
+}
+
+.modal input{
+    width:100%;
+    box-sizing:border-box;
+    padding:8px;
     margin-bottom:10px;
 }
 
 .empty{
     color:#5e6c84;
-    font-style:italic;
 }
 
 </style>
 </head>
 <body>
 
-<div id="app" class="loading">
-Carregando checklists...
+<div id="app">Carregando...</div>
+
+<div class="modal" id="modal">
+    <div class="modal-content">
+
+        <h3>Nova Subtarefa</h3>
+
+        <input id="subtaskName"
+               placeholder="Nome da subtarefa">
+
+        <button class="btn btn-add"
+                onclick="salvarSubtarefa()">
+            Salvar
+        </button>
+
+        <button class="btn"
+                onclick="fecharModal()">
+            Cancelar
+        </button>
+
+    </div>
 </div>
 
 <script>
 
 const API_KEY = '3b120e2d0d7f28b68c09a418636ca6c4';
-const TOKEN = 'ATTAbbf693b04c477c2c1b7ad9e28c35cd6379692f7c3e6ee779012048b14f8f31522F597137';
+const TOKEN = 'ATTA5a6eeba5755e938a555f9dd37ef28f27dfeb9659e9b13a13708f9bb8c13b86348D3EDE3F';
 
 const t = TrelloPowerUp.iframe();
 
+let cardId = null;
+let currentParentId = null;
+
+async function getStorage(){
+    return await t.get(
+        'card',
+        'shared',
+        'deeplists',
+        {}
+    );
+}
+
+async function setStorage(data){
+    await t.set(
+        'card',
+        'shared',
+        'deeplists',
+        data
+    );
+}
+
+function abrirModal(parentId){
+
+    currentParentId = parentId;
+
+    document.getElementById('subtaskName').value='';
+
+    document.getElementById('modal').style.display='flex';
+}
+
+function fecharModal(){
+
+    currentParentId = null;
+
+    document.getElementById('modal').style.display='none';
+}
+
+async function salvarSubtarefa(){
+
+    const nome =
+        document.getElementById('subtaskName')
+        .value.trim();
+
+    if(!nome) return;
+
+    const storage =
+        await getStorage();
+
+    if(!storage[currentParentId]){
+        storage[currentParentId]=[];
+    }
+
+    storage[currentParentId].push({
+        id:Date.now().toString(),
+        text:nome,
+        done:false
+    });
+
+    await setStorage(storage);
+
+    fecharModal();
+
+    await carregar();
+}
+
+async function excluirSubtarefa(parentId,subId){
+
+    const storage =
+        await getStorage();
+
+    storage[parentId] =
+        (storage[parentId]||[])
+        .filter(x=>x.id!==subId);
+
+    await setStorage(storage);
+
+    await atualizarPai(parentId);
+
+    await carregar();
+}
+
+async function toggleSubtarefa(parentId,subId){
+
+    const storage =
+        await getStorage();
+
+    const lista =
+        storage[parentId] || [];
+
+    const item =
+        lista.find(x=>x.id===subId);
+
+    item.done = !item.done;
+
+    await setStorage(storage);
+
+    await atualizarPai(parentId);
+
+    await carregar();
+}
+
+async function atualizarPai(parentId){
+
+    const storage =
+        await getStorage();
+
+    const lista =
+        storage[parentId] || [];
+
+    if(lista.length===0){
+        return;
+    }
+
+    const todas =
+        lista.every(x=>x.done);
+
+    const url =
+        `https://api.trello.com/1/cards/${cardId}/checkItem/${parentId}`+
+        `?state=${todas?'complete':'incomplete'}`+
+        `&key=${API_KEY}`+
+        `&token=${TOKEN}`;
+
+    await fetch(url,{
+        method:'PUT'
+    });
+}
+
 async function carregar(){
 
-    try{
+    const card =
+        await t.card('id','name');
 
-        let card;
+    cardId = card.id;
 
-        try{
-            card = await t.card('id','name');
-        }
-        catch(e){
-
-            document.getElementById('app').innerHTML =
-                '<h2>Fora do Trello</h2>';
-
-            return;
-        }
-
-        const response = await fetch(
+    const response =
+        await fetch(
             `https://api.trello.com/1/cards/${card.id}/checklists?key=${API_KEY}&token=${TOKEN}`
         );
 
-        const checklists = await response.json();
+    const checklists =
+        await response.json();
 
-        renderizar(checklists);
+    const storage =
+        await getStorage();
 
-        t.sizeTo('body');
+    const app =
+        document.getElementById('app');
 
-    }catch(err){
-
-        document.getElementById('app').innerHTML =
-            '<pre>' + err.message + '</pre>';
-
-    }
-
-}
-
-function renderizar(checklists){
-
-    const app = document.getElementById('app');
-
-    app.innerHTML = '';
+    app.innerHTML='';
 
     if(!checklists.length){
 
@@ -138,86 +299,94 @@ function renderizar(checklists){
         return;
     }
 
-    checklists.forEach(checklist => {
+    checklists.forEach(checklist=>{
 
-        let html = '';
+        let html='';
 
         html += `
-            <div class="checklist">
+        <div class="checklist">
 
-                <div class="checklist-title">
-                    📋 ${checklist.name}
-                </div>
-
-                <div class="progress">
-                    ${checklist.checkItems.length} itens
-                </div>
+            <div class="checklist-title">
+                📋 ${checklist.name}
+            </div>
         `;
 
-        const items = checklist.checkItems;
-
-        for(let i = 0; i < items.length; i++){
-
-            const item = items[i];
-
-            if(item.name.startsWith('↳')){
-                continue;
-            }
+        checklist.checkItems.forEach(item=>{
 
             html += `
-                <div class="task">
+            <div class="task">
 
-                    <div class="task-header">
-                        <div class="task-name">
-                            ${item.state === 'complete' ? '✅' : '☐'}
-                            ${escapeHtml(item.name)}
-                        </div>
+                <div class="task-header">
+
+                    <div class="task-name">
+                        ${item.state==='complete'?'✅':'☐'}
+                        ${item.name}
                     </div>
 
-                    <div class="subtasks">
+                    <button
+                        class="btn btn-add"
+                        onclick="abrirModal('${item.id}')">
+                        + Subtarefa
+                    </button>
+
+                </div>
+
+                <div class="subtasks">
             `;
 
-            let j = i + 1;
+            const subs =
+                storage[item.id] || [];
 
-            while(
-                j < items.length &&
-                items[j].name.startsWith('↳')
-            ){
+            subs.forEach(sub=>{
 
                 html += `
-                    <div class="subtask">
-                        ${items[j].state === 'complete' ? '✅' : '☐'}
-                        ${escapeHtml(
-                            items[j].name.replace(/^↳\s*/, '')
-                        )}
-                    </div>
-                `;
+                <div class="subtask">
 
-                j++;
-            }
+                    <div class="subtask-left">
+
+                        <input
+                            type="checkbox"
+                            ${sub.done?'checked':''}
+                            onchange="
+                                toggleSubtarefa(
+                                    '${item.id}',
+                                    '${sub.id}'
+                                )
+                            ">
+
+                        <span>
+                            ${sub.text}
+                        </span>
+
+                    </div>
+
+                    <button
+                        class="btn btn-del"
+                        onclick="
+                            excluirSubtarefa(
+                                '${item.id}',
+                                '${sub.id}'
+                            )
+                        ">
+                        X
+                    </button>
+
+                </div>
+                `;
+            });
 
             html += `
-                    </div>
                 </div>
+            </div>
             `;
+        });
 
-        }
-
-        html += `</div>`;
+        html += '</div>';
 
         app.innerHTML += html;
-
     });
 
-}
-
-function escapeHtml(text){
-
-    return text
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;');
-
+    t.sizeTo('body');
 }
 
 carregar();

@@ -319,8 +319,14 @@ async function carregar(){
                 <div class="task-header">
 
                     <div class="task-name">
-                        ${item.state==='complete'?'✅':'☐'}
+
+                        <input
+                            type="checkbox"
+                            ${item.state==='complete'?'checked':''}
+                            onchange="togglePai('${item.id}')">
+                    
                         ${item.name}
+                
                     </div>
 
                     <button

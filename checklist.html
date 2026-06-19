@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>DeepLists Clone V3.1</title>
+<title>DeepLists Clone V2</title>
 
 <script src="https://p.trellocdn.com/power-up.min.js"></script>
 
@@ -12,8 +12,8 @@ body{
     margin:0;
     padding:12px;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    background:#fff;
     color:#172b4d;
+    background:#fff;
 }
 
 .checklist{
@@ -21,59 +21,35 @@ body{
 }
 
 .checklist-title{
-    font-size:17px;
+    font-size:16px;
     font-weight:600;
-    margin-bottom:12px;
+    margin-bottom:10px;
     border-bottom:1px solid #dfe1e6;
-    padding-bottom:8px;
+    padding-bottom:6px;
 }
 
 .task{
     background:#f4f5f7;
     border-radius:8px;
+    padding:8px;
     margin-bottom:8px;
-    overflow:hidden;
-}
-
-.task.completed{
-    background:#e3fcef;
 }
 
 .task-header{
     display:flex;
-    align-items:center;
     justify-content:space-between;
-    padding:10px;
-}
-
-.task-left{
-    display:flex;
     align-items:center;
-    gap:8px;
-    cursor:pointer;
-    flex:1;
-}
-
-.arrow{
-    font-size:12px;
-    width:14px;
 }
 
 .task-name{
     font-weight:500;
 }
 
-.counter{
-    color:#5e6c84;
-    font-size:12px;
-    margin-left:6px;
-}
-
 .btn{
     border:none;
     border-radius:4px;
     cursor:pointer;
-    padding:5px 10px;
+    padding:4px 8px;
 }
 
 .btn-add{
@@ -81,45 +57,54 @@ body{
     color:white;
 }
 
-.btn-del{
-    background:#eb5a46;
-    color:white;
-}
-
 .subtasks{
-    padding:0 12px 12px 34px;
+    margin-top:8px;
+    margin-left:24px;
 }
 
 .subtask{
     display:flex;
-    justify-content:space-between;
     align-items:center;
+    justify-content:space-between;
     padding:4px 0;
 }
 
 .subtask-left{
     display:flex;
     align-items:center;
-    gap:8px;
+    gap:6px;
 }
 
-.new-subtask{
-    margin-top:8px;
+.btn-del{
+    background:#eb5a46;
+    color:white;
 }
 
-.new-subtask input{
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.4);
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+
+.modal-content{
+    background:white;
+    padding:16px;
+    width:320px;
+    border-radius:8px;
+}
+
+.modal input{
     width:100%;
-    padding:8px;
     box-sizing:border-box;
-    border:1px solid #dfe1e6;
-    border-radius:4px;
-    margin-bottom:6px;
+    padding:8px;
+    margin-bottom:10px;
 }
 
 .empty{
     color:#5e6c84;
-    font-style:italic;
-    padding:6px 0;
 }
 
 </style>
@@ -127,6 +112,27 @@ body{
 <body>
 
 <div id="app">Carregando...</div>
+
+<div class="modal" id="modal">
+    <div class="modal-content">
+
+        <h3>Nova Subtarefa</h3>
+
+        <input id="subtaskName"
+               placeholder="Nome da subtarefa">
+
+        <button class="btn btn-add"
+                onclick="salvarSubtarefa()">
+            Salvar
+        </button>
+
+        <button class="btn"
+                onclick="fecharModal()">
+            Cancelar
+        </button>
+
+    </div>
+</div>
 
 <script>
 
@@ -136,20 +142,18 @@ const TOKEN = 'ATTA5a6eeba5755e938a555f9dd37ef28f27dfeb9659e9b13a13708f9bb8c13b8
 const t = TrelloPowerUp.iframe();
 
 let cardId = null;
+let currentParentId = null;
 
-async function getData(){
+async function getStorage(){
     return await t.get(
         'card',
         'shared',
         'deeplists',
-        {
-            subtasks:{},
-            collapsed:{}
-        }
+        {}
     );
 }
 
-async function saveData(data){
+async function setStorage(data){
     await t.set(
         'card',
         'shared',
@@ -158,118 +162,93 @@ async function saveData(data){
     );
 }
 
-async function toggleCollapse(parentId){
+function abrirModal(parentId){
 
-    const data = await getData();
+    currentParentId = parentId;
 
-    data.collapsed[parentId] =
-        !data.collapsed[parentId];
+    document.getElementById('subtaskName').value='';
 
-    await saveData(data);
-
-    carregar();
+    document.getElementById('modal').style.display='flex';
 }
 
-async function togglePai(parentId){
+function fecharModal(){
 
-    const data = await getData();
+    currentParentId = null;
 
-    const lista =
-        data.subtasks[parentId] || [];
-
-    if(lista.length === 0){
-        return;
-    }
-
-    const todas =
-        lista.every(x => x.done);
-
-    lista.forEach(sub=>{
-        sub.done = !todas;
-    });
-
-    await saveData(data);
-
-    await atualizarPai(parentId);
-
-    carregar();
+    document.getElementById('modal').style.display='none';
 }
 
-async function adicionarSubtarefa(parentId){
-
-    const campo =
-        document.getElementById(
-            'new_' + parentId
-        );
+async function salvarSubtarefa(){
 
     const nome =
-        campo.value.trim();
+        document.getElementById('subtaskName')
+        .value.trim();
 
     if(!nome) return;
 
-    const data =
-        await getData();
+    const storage =
+        await getStorage();
 
-    if(!data.subtasks[parentId]){
-        data.subtasks[parentId]=[];
+    if(!storage[currentParentId]){
+        storage[currentParentId]=[];
     }
 
-    data.subtasks[parentId].push({
+    storage[currentParentId].push({
         id:Date.now().toString(),
         text:nome,
         done:false
     });
 
-    await saveData(data);
+    await setStorage(storage);
 
-    carregar();
+    fecharModal();
+
+    await carregar();
 }
 
-async function excluirSub(parentId,subId){
+async function excluirSubtarefa(parentId,subId){
 
-    const data =
-        await getData();
+    const storage =
+        await getStorage();
 
-    data.subtasks[parentId] =
-        (data.subtasks[parentId]||[])
+    storage[parentId] =
+        (storage[parentId]||[])
         .filter(x=>x.id!==subId);
 
-    await saveData(data);
+    await setStorage(storage);
 
     await atualizarPai(parentId);
 
-    carregar();
+    await carregar();
 }
 
-async function toggleSub(parentId,subId){
+async function toggleSubtarefa(parentId,subId){
 
-    const data =
-        await getData();
+    const storage =
+        await getStorage();
 
     const lista =
-        data.subtasks[parentId] || [];
+        storage[parentId] || [];
 
-    const sub =
-        lista.find(
-            x=>x.id===subId
-        );
+    const item =
+        lista.find(x=>x.id===subId);
 
-    sub.done = !sub.done;
+    item.done = !item.done;
 
-    await saveData(data);
+    await setStorage(storage);
 
     await atualizarPai(parentId);
 
-    carregar();
+    await carregar();
 }
 
 async function atualizarPai(parentId){
 
-    const data =
-        await getData();
+    const storage =
+        await getStorage();
 
     const lista =
-        data.subtasks[parentId] || [];
+        storage[parentId] || [];
 
     if(lista.length===0){
         return;
@@ -278,18 +257,21 @@ async function atualizarPai(parentId){
     const todas =
         lista.every(x=>x.done);
 
-    await fetch(
-        `https://api.trello.com/1/cards/${cardId}/checkItem/${parentId}?state=${todas?'complete':'incomplete'}&key=${API_KEY}&token=${TOKEN}`,
-        {
-            method:'PUT'
-        }
-    );
+    const url =
+        `https://api.trello.com/1/cards/${cardId}/checkItem/${parentId}`+
+        `?state=${todas?'complete':'incomplete'}`+
+        `&key=${API_KEY}`+
+        `&token=${TOKEN}`;
+
+    await fetch(url,{
+        method:'PUT'
+    });
 }
 
 async function carregar(){
 
     const card =
-        await t.card('id');
+        await t.card('id','name');
 
     cardId = card.id;
 
@@ -301,13 +283,21 @@ async function carregar(){
     const checklists =
         await response.json();
 
-    const data =
-        await getData();
+    const storage =
+        await getStorage();
 
     const app =
         document.getElementById('app');
 
     app.innerHTML='';
+
+    if(!checklists.length){
+
+        app.innerHTML =
+            '<div class="empty">Nenhum checklist encontrado.</div>';
+
+        return;
+    }
 
     checklists.forEach(checklist=>{
 
@@ -315,6 +305,7 @@ async function carregar(){
 
         html += `
         <div class="checklist">
+
             <div class="checklist-title">
                 📋 ${checklist.name}
             </div>
@@ -322,161 +313,127 @@ async function carregar(){
 
         checklist.checkItems.forEach(item=>{
 
-            const subs =
-                data.subtasks[item.id] || [];
-
-            const total =
-                subs.length;
-
-            const done =
-                subs.filter(
-                    x=>x.done
-                ).length;
-
-            const collapsed =
-                data.collapsed[item.id];
-
-            const completed =
-                total>0 &&
-                done===total;
-
             html += `
-            <div class="task ${completed?'completed':''}">
+            <div class="task">
 
                 <div class="task-header">
 
-                    <div
-                        class="task-left"
-                        onclick="toggleCollapse('${item.id}')">
-
-                        <div class="arrow">
-                            ${collapsed?'▶':'▼'}
-                        </div>
+                    <div class="task-name">
 
                         <input
                             type="checkbox"
-                            ${completed?'checked':''}
-                            onclick="
-                                event.stopPropagation();
-                                togglePai('${item.id}');
-                            "
-                        >
-
-                        <div class="task-name">
-                            ${item.name}
-                            <span class="counter">
-                                (${done}/${total})
-                            </span>
-                        </div>
-
+                            ${item.state==='complete'?'checked':''}
+                            onchange="togglePai('${item.id}')">
+                    
+                        ${item.name}
+                
                     </div>
 
                     <button
                         class="btn btn-add"
-                        onclick="
-                            event.stopPropagation();
-                            document.getElementById('new_${item.id}').focus();
-                        ">
+                        onclick="abrirModal('${item.id}')">
                         + Subtarefa
                     </button>
 
                 </div>
+
+                <div class="subtasks">
             `;
 
-            if(!collapsed){
+            const subs =
+                storage[item.id] || [];
+
+            subs.forEach(sub=>{
 
                 html += `
-                <div class="subtasks">
-                `;
+                <div class="subtask">
 
-                if(subs.length===0){
+                    <div class="subtask-left">
 
-                    html += `
-                    <div class="empty">
-                        Nenhuma subtarefa
-                    </div>
-                    `;
-                }
-
-                subs.forEach(sub=>{
-
-                    html += `
-                    <div class="subtask">
-
-                        <div class="subtask-left">
-
-                            <input
-                                type="checkbox"
-                                ${sub.done?'checked':''}
-                                onchange="
-                                    toggleSub(
-                                        '${item.id}',
-                                        '${sub.id}'
-                                    )
-                                "
-                            >
-
-                            <span>
-                                ${sub.text}
-                            </span>
-
-                        </div>
-
-                        <button
-                            class="btn btn-del"
-                            onclick="
-                                excluirSub(
+                        <input
+                            type="checkbox"
+                            ${sub.done?'checked':''}
+                            onchange="
+                                toggleSubtarefa(
                                     '${item.id}',
                                     '${sub.id}'
                                 )
                             ">
-                            X
-                        </button>
+
+                        <span>
+                            ${sub.text}
+                        </span>
 
                     </div>
-                    `;
-                });
-
-                html += `
-                <div class="new-subtask">
-
-                    <input
-                        id="new_${item.id}"
-                        placeholder="Nova subtarefa..."
-                        onkeydown="
-                            if(event.key==='Enter'){
-                                adicionarSubtarefa('${item.id}');
-                            }
-                        "
-                    >
 
                     <button
-                        class="btn btn-add"
+                        class="btn btn-del"
                         onclick="
-                            adicionarSubtarefa('${item.id}');
+                            excluirSubtarefa(
+                                '${item.id}',
+                                '${sub.id}'
+                            )
                         ">
-                        Salvar
+                        X
                     </button>
 
                 </div>
-
-                </div>
                 `;
-            }
+            });
 
             html += `
+                </div>
             </div>
             `;
         });
 
-        html += `
-        </div>
-        `;
+        html += '</div>';
 
         app.innerHTML += html;
     });
 
     t.sizeTo('body');
+}
+
+async function togglePai(parentId){
+
+    const storage =
+        await getStorage();
+
+    const lista =
+        storage[parentId] || [];
+
+    if(lista.length === 0){
+        return;
+    }
+
+    const todasMarcadas =
+        lista.every(x => x.done);
+
+    lista.forEach(sub => {
+        sub.done = !todasMarcadas;
+    });
+
+    storage[parentId] = lista;
+
+    await setStorage(storage);
+
+    const novoEstado =
+        !todasMarcadas
+            ? 'complete'
+            : 'incomplete';
+
+    await fetch(
+        `https://api.trello.com/1/cards/${cardId}/checkItem/${parentId}` +
+        `?state=${novoEstado}` +
+        `&key=${API_KEY}` +
+        `&token=${TOKEN}`,
+        {
+            method:'PUT'
+        }
+    );
+
+    await carregar();
 }
 
 carregar();

@@ -289,6 +289,19 @@ async function carregar(){
 
         checklist.checkItems.forEach(item=>{
 
+            const subs =
+    storage[item.id] || [];
+
+const totalSubs =
+    subs.length;
+
+const concluidas =
+    subs.filter(x => x.done).length;
+
+const todasConcluidas =
+    totalSubs > 0 &&
+    concluidas === totalSubs;
+
             html += `
             <div class="task">
 
@@ -316,18 +329,7 @@ async function carregar(){
                 <div class="subtasks">
             `;
 
-            const subs =
-    storage[item.id] || [];
-
-const totalSubs =
-    subs.length;
-
-const concluidas =
-    subs.filter(x => x.done).length;
-
-const todasConcluidas =
-    totalSubs > 0 &&
-    concluidas === totalSubs;
+            
 
             subs.forEach(sub=>{
 

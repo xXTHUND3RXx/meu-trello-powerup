@@ -35,6 +35,10 @@ body{
     margin-bottom:8px;
 }
 
+.task-complete{
+    background:#e3fcef;
+}
+
 .task-header{
     display:flex;
     justify-content:space-between;
@@ -217,7 +221,6 @@ async function excluirSubtarefa(parentId,subId){
 
     await setStorage(storage);
 
-    await atualizarPai(parentId);
 
     await carregar();
 }
@@ -237,36 +240,9 @@ async function toggleSubtarefa(parentId,subId){
 
     await setStorage(storage);
 
-    await atualizarPai(parentId);
-
     await carregar();
 }
 
-async function atualizarPai(parentId){
-
-    const storage =
-        await getStorage();
-
-    const lista =
-        storage[parentId] || [];
-
-    if(lista.length===0){
-        return;
-    }
-
-    const todas =
-        lista.every(x=>x.done);
-
-    const url =
-        `https://api.trello.com/1/cards/${cardId}/checkItem/${parentId}`+
-        `?state=${todas?'complete':'incomplete'}`+
-        `&key=${API_KEY}`+
-        `&token=${TOKEN}`;
-
-    await fetch(url,{
-        method:'PUT'
-    });
-}
 
 async function carregar(){
 
@@ -322,11 +298,11 @@ async function carregar(){
 
                         <input
                             type="checkbox"
-                            ${item.state==='complete'?'checked':''}
+                            ${todasConcluidas ? 'checked' : ''}
                             onchange="togglePai('${item.id}')">
-                    
+
                         ${item.name}
-                
+
                     </div>
 
                     <button
@@ -341,7 +317,17 @@ async function carregar(){
             `;
 
             const subs =
-                storage[item.id] || [];
+    storage[item.id] || [];
+
+const totalSubs =
+    subs.length;
+
+const concluidas =
+    subs.filter(x => x.done).length;
+
+const todasConcluidas =
+    totalSubs > 0 &&
+    concluidas === totalSubs;
 
             subs.forEach(sub=>{
 
@@ -423,15 +409,6 @@ async function togglePai(parentId){
             ? 'complete'
             : 'incomplete';
 
-    await fetch(
-        `https://api.trello.com/1/cards/${cardId}/checkItem/${parentId}` +
-        `?state=${novoEstado}` +
-        `&key=${API_KEY}` +
-        `&token=${TOKEN}`,
-        {
-            method:'PUT'
-        }
-    );
 
     await carregar();
 }

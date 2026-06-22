@@ -107,10 +107,6 @@ body{
     color:#5e6c84;
 }
 
-.task-complete{
-    background:#e3fcef;
-}
-
 </style>
 </head>
 <body>
@@ -318,7 +314,7 @@ async function carregar(){
         checklist.checkItems.forEach(item=>{
 
             html += `
-            <div class="task ${todasConcluidas ? 'task-complete' : ''}">
+            <div class="task">
 
                 <div class="task-header">
 
@@ -330,7 +326,6 @@ async function carregar(){
                             onchange="togglePai('${item.id}')">
                     
                         ${item.name}
-                        (${concluidas}/${totalSubs})
                 
                     </div>
 
@@ -347,15 +342,6 @@ async function carregar(){
 
             const subs =
                 storage[item.id] || [];
-
-            const totalSubs = subs.length;
-
-const concluidas =
-    subs.filter(x=>x.done).length;
-
-const todasConcluidas =
-    totalSubs > 0 &&
-    concluidas === totalSubs;
 
             subs.forEach(sub=>{
 

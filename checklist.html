@@ -436,12 +436,59 @@ async function togglePai(parentId){
     await carregar();
 }
 
-carregar().catch(err => {
-    document.getElementById('app').innerHTML =
-        '<pre style="white-space:pre-wrap;color:red;">' +
-        (err.stack || err.message || JSON.stringify(err,null,2)) +
-        '</pre>';
+// ------------------------------
+// Atualização automática
+// ------------------------------
+
+let carregando = false;
+
+async function atualizarInterface() {
+
+    if (carregando) {
+        return;
+    }
+
+    carregando = true;
+
+    try {
+
+        await carregar();
+
+    } catch (err) {
+
+        document.getElementById('app').innerHTML =
+            '<pre style="white-space:pre-wrap;color:red;">' +
+            (err.stack ||
+             err.message ||
+             JSON.stringify(err, null, 2)) +
+            '</pre>';
+
+    } finally {
+
+        carregando = false;
+
+    }
+
+}
+
+// Primeira carga
+atualizarInterface();
+
+// Quando o Trello solicitar uma nova renderização
+t.render(async () => {
+
+    await atualizarInterface();
+
+    return t.sizeTo('body');
+
 });
+
+// Atualização automática a cada 2 segundos
+setInterval(() => {
+
+    atualizarInterface();
+
+}, 2000);
 
 </script>
 

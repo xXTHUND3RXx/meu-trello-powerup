@@ -436,7 +436,12 @@ async function togglePai(parentId){
     await carregar();
 }
 
-carregar();
+carregar().catch(err => {
+    document.getElementById('app').innerHTML =
+        '<pre style="white-space:pre-wrap;color:red;">' +
+        (err.stack || err.message || JSON.stringify(err,null,2)) +
+        '</pre>';
+});
 
 </script>
 

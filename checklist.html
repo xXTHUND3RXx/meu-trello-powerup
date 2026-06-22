@@ -166,6 +166,18 @@ async function setStorage(data){
     );
 }
 
+async function atualizarChecklistNativa(parentId, concluido) {
+    await fetch(
+        `https://api.trello.com/1/cards/${cardId}/checkItem/${parentId}` +
+        `?key=${API_KEY}` +
+        `&token=${TOKEN}` +
+        `&state=${concluido ? 'complete' : 'incomplete'}`,
+        {
+            method: 'PUT'
+        }
+    );
+}
+
 function abrirModal(parentId){
 
     currentParentId = parentId;
@@ -225,20 +237,30 @@ async function excluirSubtarefa(parentId,subId){
     await carregar();
 }
 
-async function toggleSubtarefa(parentId,subId){
+async function toggleSubtarefa(parentId, subId){
 
-    const storage =
-        await getStorage();
+    const storage = await getStorage();
 
-    const lista =
-        storage[parentId] || [];
+    const lista = storage[parentId] || [];
 
-    const item =
-        lista.find(x=>x.id===subId);
+    const item = lista.find(x => x.id === subId);
+
+    if(!item) return;
 
     item.done = !item.done;
 
     await setStorage(storage);
+
+    // verifica se todas as subtarefas foram concluídas
+    const todasConcluidas =
+        lista.length > 0 &&
+        lista.every(x => x.done);
+
+    // sincroniza com o Trello
+    await atualizarChecklistNativa(
+        parentId,
+        todasConcluidas
+    );
 
     await carregar();
 }
@@ -385,11 +407,9 @@ const todasConcluidas =
 
 async function togglePai(parentId){
 
-    const storage =
-        await getStorage();
+    const storage = await getStorage();
 
-    const lista =
-        storage[parentId] || [];
+    const lista = storage[parentId] || [];
 
     if(lista.length === 0){
         return;
@@ -398,6 +418,7 @@ async function togglePai(parentId){
     const todasMarcadas =
         lista.every(x => x.done);
 
+    // marca ou desmarca todas as subtarefas
     lista.forEach(sub => {
         sub.done = !todasMarcadas;
     });
@@ -406,11 +427,11 @@ async function togglePai(parentId){
 
     await setStorage(storage);
 
-    const novoEstado =
+    // sincroniza com o checklist nativo do Trello
+    await atualizarChecklistNativa(
+        parentId,
         !todasMarcadas
-            ? 'complete'
-            : 'incomplete';
-
+    );
 
     await carregar();
 }
